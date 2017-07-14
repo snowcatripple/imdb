@@ -178,68 +178,102 @@ else:
         posts_replied_to = list(filter(None, posts_replied_to))
 		
 # Get the top 5 values from our subreddit
-for comment in subreddit.comments(limit=10):
-    #print(comment.title)
+while (keep_on):
+	for comment in subreddit.comments(limit=10):
+		#print(comment.title)
 
-    # If we haven't replied to this post before
-		
-	if comment.id not in posts_replied_to:
-		pattern1 = re.compile("http://www\.imdb\.com/(?:title/|name/)(?P<id1>tt|nm)(?P<id2>\d{7})/")
-		match = pattern1.findall(comment.body)
-		if not match:
-			#continue
-			# if re.search(r'linkimdb\((.*?)\)', comment.title, re.IGNORECASE):
-            # search for linkimdb and search for names
-				# print("linkimdb found : ", comment.title)
-				# posts_replied_to.append(comment.id)
-			#pattern2 = re.search(r'linkimdb\((.*?)\)', comment.body, re.IGNORECASE)
-			#pattern2 = re.search('\((.*?)\)',pattern2.group(0),re.IGNORECASE)
-			#pattern2 = re.search('\((.*?)\)',pattern2.group(0),re.IGNORECASE)
+		# If we haven't replied to this post before
 			
-			#pattern2 = re.compile(r"\(([A-Za-z0-9_]+)\)") 
-			pattern2 = re.compile(r"linkimdb(.*?)\)")
-			match1 = pattern2.findall(comment.body)
-			print(match1)
-			if not match1:
-				continue
-			if match1:
-				print("linkimdb found : ", comment)		
+		if comment.id not in posts_replied_to:
+			pattern1 = re.compile("http://www\.imdb\.com/(?:title/|name/)(?P<id1>tt|nm)(?P<id2>\d{7})/")
+			match = pattern1.findall(comment.body)
+			if not match:
+				#continue
+				# if re.search(r'linkimdb\((.*?)\)', comment.title, re.IGNORECASE):
+				# search for linkimdb and search for names
+					# print("linkimdb found : ", comment.title)
+					# posts_replied_to.append(comment.id)
+				#pattern2 = re.search(r'linkimdb\((.*?)\)', comment.body, re.IGNORECASE)
+				#pattern2 = re.search('\((.*?)\)',pattern2.group(0),re.IGNORECASE)
+				#pattern2 = re.search('\((.*?)\)',pattern2.group(0),re.IGNORECASE)
+				
+				#pattern2 = re.compile(r"\(([A-Za-z0-9_]+)\)") 
+				pattern2 = re.compile(r"linkimdb(.*?)\)")
+				match1 = pattern2.findall(comment.body)
+				print(match1)
+				if not match1:
+					continue
+				if match1:
+					print("linkimdb found : ", comment)		
+					coms = []
+					posts_replied_to.append(comment.id)
+					for m in match1:
+						match3 = re.search("actor|movie",m)
+						if (match3.group(0) == "actor"):
+							searchterm = m.split("(")[1]
+							info = get_imdb_search(searchterm,"actor")
+							print("actor")
+							if (info == "No Data"):
+								print("No Data")
+								continue
+							else:
+								com = reply2("actor",info)
+								if (com == ""):
+									continue
+								else:
+									coms.append(com)
+						if (match3.group(0) == "movie"):
+							searchterm = m.split("(")[1]
+							info = get_imdb_search(searchterm,"movie")
+							print("movie")
+							if (info == "No Data"):
+								print("No Data")
+								continue
+							else:
+								com = reply2("movie",info)
+								if (com == ""):
+									continue
+								else:
+									coms.append(com)
+						else:
+							continue
+						
+					try:
+						print("linkimdb coms")
+						print(coms)
+						if (len(coms) > 0):
+							comment.reply('\n\n-----------------\n\n'.join(coms)
+							+ '\n\n------------------------\n\n^^^[Questions/Comments/Suggestions?](http://www.reddit.com/message/compose/?to=kaevaeth&subject=IMDbBot) ^^^Version ^^^'
+							+ str(version) + ' ^^^[Source](https://github.com)')
+						else:
+							with open("posts_replied_to.txt", "w") as f:
+								for post_id in posts_replied_to:
+									f.write(post_id + "\n")
+					except requests.exceptions.HTTPError as err:
+						if err.response.status_code in [502, 503, 504]:
+				# these errors may only be temporary
+							pass
+						else:
+				# assume other errors are fatal
+							print str(err)
+							print "Terminating"
+						
+			if match:
+				print(comment)
 				coms = []
 				posts_replied_to.append(comment.id)
-				for m in match1:
-					match3 = re.search("actor|movie",m)
-					if (match3.group(0) == "actor"):
-						searchterm = m.split("(")[1]
-						info = get_imdb_search(searchterm,"actor")
-						print("actor")
-						if (info == "No Data"):
-							print("No Data")
-							continue
-						else:
-							com = reply2("actor",info)
-							if (com == ""):
-								continue
-							else:
-								coms.append(com)
-					if (match3.group(0) == "movie"):
-						searchterm = m.split("(")[1]
-						info = get_imdb_search(searchterm,"movie")
-						print("movie")
-						if (info == "No Data"):
-							print("No Data")
-							continue
-						else:
-							com = reply2("movie",info)
-							if (com == ""):
-								continue
-							else:
-								coms.append(com)
-					else:
+				for m in match:
+					imdb = "".join(m)
+					info = get_imdb_data(imdb)
+					if (info == "No Data"):
 						continue
-					
+					else:
+						com = reply(m[0],info)
+						if (com == ""):
+							continue
+						else:
+							coms.append(com)
 				try:
-					print("linkimdb coms")
-					print(coms)
 					if (len(coms) > 0):
 						comment.reply('\n\n-----------------\n\n'.join(coms)
 						+ '\n\n------------------------\n\n^^^[Questions/Comments/Suggestions?](http://www.reddit.com/message/compose/?to=kaevaeth&subject=IMDbBot) ^^^Version ^^^'
@@ -250,47 +284,14 @@ for comment in subreddit.comments(limit=10):
 								f.write(post_id + "\n")
 				except requests.exceptions.HTTPError as err:
 					if err.response.status_code in [502, 503, 504]:
-			# these errors may only be temporary
+			   # these errors may only be temporary
 						pass
 					else:
-			# assume other errors are fatal
+			   # assume other errors are fatal
 						print str(err)
 						print "Terminating"
-					
-		if match:
-			print(comment)
-			coms = []
-			posts_replied_to.append(comment.id)
-			for m in match:
-				imdb = "".join(m)
-				info = get_imdb_data(imdb)
-				if (info == "No Data"):
-					continue
-				else:
-					com = reply(m[0],info)
-					if (com == ""):
-						continue
-					else:
-						coms.append(com)
-			try:
-				if (len(coms) > 0):
-					comment.reply('\n\n-----------------\n\n'.join(coms)
-					+ '\n\n------------------------\n\n^^^[Questions/Comments/Suggestions?](http://www.reddit.com/message/compose/?to=kaevaeth&subject=IMDbBot) ^^^Version ^^^'
-					+ str(version) + ' ^^^[Source](https://github.com)')
-				else:
-					with open("posts_replied_to.txt", "w") as f:
-						for post_id in posts_replied_to:
-							f.write(post_id + "\n")
-			except requests.exceptions.HTTPError as err:
-				if err.response.status_code in [502, 503, 504]:
-           # these errors may only be temporary
-					pass
-				else:
-           # assume other errors are fatal
-					print str(err)
-					print "Terminating"
 
-# Write our updated list back to the file
-with open("posts_replied_to.txt", "w") as f:
-    for post_id in posts_replied_to:
-        f.write(post_id + "\n")					
+	# Write our updated list back to the file
+	with open("posts_replied_to.txt", "w") as f:
+		for post_id in posts_replied_to:
+			f.write(post_id + "\n")					
