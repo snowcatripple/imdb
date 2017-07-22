@@ -295,3 +295,4 @@ while (keep_on):
 	with open("posts_replied_to.txt", "w") as f:
 		for post_id in posts_replied_to:
 			f.write(post_id + "\n")					
+			time.sleep(5)
